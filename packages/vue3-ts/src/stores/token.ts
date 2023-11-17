@@ -5,16 +5,24 @@ export const useTokenStore = defineStore("token-store", () => {
   // 类似于state
   const tokenJSON = ref("");
   // 类似于getters
-  const token = computed(() => {
-    return JSON.parse(tokenJSON.value || "{}");
+  const tokenInfo = computed(() => {
+    try {
+      return JSON.parse(
+        tokenJSON.value || localStorage.getItem("tokenInfo") || "{}"
+      );
+    } catch (error) {
+      console.error("tokenInfo error>>>", error);
+      localStorage.setItem("tokenInfo", JSON.stringify({}));
+    }
   });
   // 类似于actions
-  function saveToken(token: string) {
-    tokenJSON.value = token;
+  function saveToken(tokenInfo: string) {
+    tokenJSON.value = tokenInfo;
+    localStorage.setItem("tokenInfo", tokenInfo);
   }
 
   return {
-    token,
+    tokenInfo,
     saveToken,
   };
 });
