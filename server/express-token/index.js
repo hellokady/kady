@@ -5,7 +5,7 @@ const app = express();
 const port = 3000;
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
-const refresh_map = new Set();
+const refresh_map = new Map();
 
 /**
  *
@@ -38,10 +38,17 @@ app.use(express.urlencoded({ extended: true }));
 // 解决跨域
 app.use(cors());
 
+app.get("/refresh_map", (req, res) => {
+  res.send({
+    refresh_map: [...refresh_map],
+  });
+});
+
 app.post("/login", (req, res) => {
   const access_token = genToken(req);
   const refresh_token = genToken(req, true);
-  refresh_map.add(refresh_token);
+  // 每次登录只保存最新的刷新令牌
+  refresh_map.set(req.ip, refresh_token);
 
   res.send({
     access_token,
@@ -57,16 +64,17 @@ app.post("/refresh_token", (req, res) => {
 
   try {
     const refresh_token = req.body.refresh_token;
+
+    const { ip } = verifyToken(refresh_token, true);
     // 保证刷新令牌只存在一个，只保存最新的刷新令牌
-    if (!refresh_map.has(refresh_token)) {
+    if (refresh_map.get(ip) !== refresh_token) {
       res.json();
       return;
     }
-    verifyToken(refresh_token, true);
-    refresh_map.delete(refresh_token);
+
     const new_access_token = genToken(req);
     const new_refresh_token = genToken(req, true);
-    refresh_map.add(new_refresh_token);
+    refresh_map.set(ip, new_refresh_token);
 
     res.send({
       access_token: new_access_token,
